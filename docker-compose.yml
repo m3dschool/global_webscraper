@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: webscraper
+      POSTGRES_USER: webscraper
+      POSTGRES_PASSWORD: webscraper_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # ports:
+      # - "5433:5432"  # Removed external port mapping
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U webscraper"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis for Celery
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Web API
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://webscraper:webscraper_password@db:5432/webscraper
+      REDIS_URL: redis://redis:6379/0
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      DEBUG: "true"
+      LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Celery Worker
+  worker:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://webscraper:webscraper_password@db:5432/webscraper
+      REDIS_URL: redis://redis:6379/0
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+    command: celery -A src.scheduler.celery_app worker --loglevel=info --concurrency=2
+
+  # Celery Beat (Scheduler)
+  beat:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://webscraper:webscraper_password@db:5432/webscraper
+      REDIS_URL: redis://redis:6379/0
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      LOG_LEVEL: INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src
+    command: celery -A src.scheduler.celery_app beat --loglevel=info
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:8000/api
+    volumes:
+      - ./src/frontend/src:/app/src
+      - ./src/frontend/public:/app/public
+    depends_on:
+      - api
+
+  # Prometheus (optional - for metrics)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+volumes:
+  postgres_data:

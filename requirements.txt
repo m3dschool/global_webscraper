@@ -1,0 +1,43 @@
+# Core web scraping
+playwright==1.41.0
+playwright-stealth==1.0.6
+beautifulsoup4==4.12.2
+lxml==4.9.3
+requests==2.31.0
+
+# FastAPI backend
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.13.0
+psycopg2-binary==2.9.9
+asyncpg==0.29.0
+
+# Scheduling & Background Tasks
+celery==5.3.4
+redis==5.0.1
+apscheduler==3.10.4
+
+# Google Gemini
+google-generativeai==0.3.2
+
+# Security & Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+
+# Observability
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+ruff==0.1.6
+setuptools>=65.0

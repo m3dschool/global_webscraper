@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 
 
@@ -51,7 +51,7 @@ class ScrapeConfig(ScrapeConfigBase):
 class ScrapeResultBase(BaseModel):
     status: str
     error_message: Optional[str] = None
-    extracted_data: Optional[Dict[str, Any]] = None
+    extracted_data: Optional[Any] = None
     gemini_response: Optional[Dict[str, Any]] = None
     gemini_cost: Optional[float] = None
     gemini_model_used: Optional[str] = None

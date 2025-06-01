@@ -9,7 +9,8 @@
       "Bash(docker-compose up:*)",
       "Bash(curl:*)",
       "Bash(docker exec:*)",
-      "Bash(docker-compose stop:*)"
+      "Bash(docker-compose stop:*)",
+      "Bash(docker-compose restart:*)"
     ],
     "deny": []
   }
